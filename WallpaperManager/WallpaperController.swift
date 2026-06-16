@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -32,11 +33,39 @@ final class WallpaperController: ObservableObject {
         didSet { defaults.set(autoApplyOnLaunch, forKey: Keys.autoApply) }
     }
 
+    /// Whether the app is registered to launch automatically at login.
+    /// Backed by the system login-item registration rather than UserDefaults.
+    @Published var launchAtLogin: Bool {
+        didSet { applyLaunchAtLogin() }
+    }
+
     init() {
         // didSet is not triggered for assignments inside init, so there is no double write.
         portraitURL = defaults.url(forKey: Keys.portrait)
         landscapeURL = defaults.url(forKey: Keys.landscape)
         autoApplyOnLaunch = defaults.bool(forKey: Keys.autoApply)
+        // The system registration is the source of truth for the login item.
+        launchAtLogin = SMAppService.mainApp.status == .enabled
+    }
+
+    // MARK: - Launch at login
+
+    /// Register or unregister the app as a login item to match `launchAtLogin`.
+    private func applyLaunchAtLogin() {
+        let service = SMAppService.mainApp
+        do {
+            if launchAtLogin {
+                if service.status != .enabled {
+                    try service.register()
+                }
+            } else if service.status == .enabled {
+                try service.unregister()
+            }
+        } catch {
+            print("Failed to update launch at login: \(error)")
+            // Reflect the actual system state if the change didn't take effect.
+            launchAtLogin = service.status == .enabled
+        }
     }
 
     // MARK: - Image selection

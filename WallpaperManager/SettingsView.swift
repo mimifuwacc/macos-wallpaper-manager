@@ -32,6 +32,8 @@ struct SettingsView: View {
 
             Toggle("Apply automatically on launch", isOn: $controller.autoApplyOnLaunch)
 
+            Toggle("Launch at login", isOn: $controller.launchAtLogin)
+
             HStack {
                 Spacer()
                 Button("Apply Now") {

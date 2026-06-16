@@ -4,6 +4,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var statusItem: NSStatusItem!
     private var autoApplyMenuItem: NSMenuItem!
+    private var launchAtLoginMenuItem: NSMenuItem!
     private let controller = WallpaperController()
     private lazy var settingsWindowController = SettingsWindowController(controller: controller)
 
@@ -50,6 +51,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         autoApplyMenuItem.state = controller.autoApplyOnLaunch ? .on : .off
         menu.addItem(autoApplyMenuItem)
 
+        launchAtLoginMenuItem = NSMenuItem(
+            title: "Launch at Login",
+            action: #selector(toggleLaunchAtLogin),
+            keyEquivalent: ""
+        )
+        launchAtLoginMenuItem.state = controller.launchAtLogin ? .on : .off
+        menu.addItem(launchAtLoginMenuItem)
+
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q")
 
@@ -63,8 +72,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - NSMenuDelegate
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        // Keep the checkmark in sync with changes made from the settings window.
+        // Keep the checkmarks in sync with changes made from the settings window.
         autoApplyMenuItem.state = controller.autoApplyOnLaunch ? .on : .off
+        launchAtLoginMenuItem.state = controller.launchAtLogin ? .on : .off
     }
 
     // MARK: - Screen layout observation
@@ -111,6 +121,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleAutoApply() {
         controller.autoApplyOnLaunch.toggle()
         autoApplyMenuItem.state = controller.autoApplyOnLaunch ? .on : .off
+    }
+
+    @objc private func toggleLaunchAtLogin() {
+        controller.launchAtLogin.toggle()
+        // Read back the controller value: registration may have failed and reverted.
+        launchAtLoginMenuItem.state = controller.launchAtLogin ? .on : .off
     }
 
     @objc private func quit() {
