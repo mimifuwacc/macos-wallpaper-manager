@@ -1,10 +1,8 @@
 import AppKit
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!
-    private var autoApplyMenuItem: NSMenuItem!
-    private var launchAtLoginMenuItem: NSMenuItem!
     private let controller = WallpaperController()
     private lazy var settingsWindowController = SettingsWindowController(controller: controller)
 
@@ -29,52 +27,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             systemSymbolName: "photo.on.rectangle",
             accessibilityDescription: "Wallpaper Manager"
         )
-        statusItem.menu = buildMenu()
-    }
-
-    private func buildMenu() -> NSMenu {
-        let menu = NSMenu()
-        menu.delegate = self
-
-        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
-        menu.addItem(.separator())
-        menu.addItem(withTitle: "Choose Portrait Wallpaper…", action: #selector(selectPortrait), keyEquivalent: "")
-        menu.addItem(withTitle: "Choose Landscape Wallpaper…", action: #selector(selectLandscape), keyEquivalent: "")
-        menu.addItem(.separator())
-        menu.addItem(withTitle: "Apply Now", action: #selector(applyNow), keyEquivalent: "")
-
-        autoApplyMenuItem = NSMenuItem(
-            title: "Apply Automatically on Launch",
-            action: #selector(toggleAutoApply),
-            keyEquivalent: ""
-        )
-        autoApplyMenuItem.state = controller.autoApplyOnLaunch ? .on : .off
-        menu.addItem(autoApplyMenuItem)
-
-        launchAtLoginMenuItem = NSMenuItem(
-            title: "Launch at Login",
-            action: #selector(toggleLaunchAtLogin),
-            keyEquivalent: ""
-        )
-        launchAtLoginMenuItem.state = controller.launchAtLogin ? .on : .off
-        menu.addItem(launchAtLoginMenuItem)
-
-        menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q")
-
-        // Route every actionable item to self.
-        for item in menu.items where item.action != nil {
-            item.target = self
-        }
-        return menu
-    }
-
-    // MARK: - NSMenuDelegate
-
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        // Keep the checkmarks in sync with changes made from the settings window.
-        autoApplyMenuItem.state = controller.autoApplyOnLaunch ? .on : .off
-        launchAtLoginMenuItem.state = controller.launchAtLogin ? .on : .off
+        // Clicking the menu bar icon opens the settings window directly (no dropdown menu).
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(openSettings)
     }
 
     // MARK: - Screen layout observation
@@ -94,42 +49,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         controller.applyWallpapers()
     }
 
-    // MARK: - Menu actions
+    // MARK: - Actions
 
     @objc private func openSettings() {
         settingsWindowController.show()
-    }
-
-    @objc private func selectPortrait() {
-        if let url = controller.chooseImageURL() {
-            controller.portraitURL = url
-            controller.applyWallpapers()
-        }
-    }
-
-    @objc private func selectLandscape() {
-        if let url = controller.chooseImageURL() {
-            controller.landscapeURL = url
-            controller.applyWallpapers()
-        }
-    }
-
-    @objc private func applyNow() {
-        controller.applyWallpapers()
-    }
-
-    @objc private func toggleAutoApply() {
-        controller.autoApplyOnLaunch.toggle()
-        autoApplyMenuItem.state = controller.autoApplyOnLaunch ? .on : .off
-    }
-
-    @objc private func toggleLaunchAtLogin() {
-        controller.launchAtLogin.toggle()
-        // Read back the controller value: registration may have failed and reverted.
-        launchAtLoginMenuItem.state = controller.launchAtLogin ? .on : .off
-    }
-
-    @objc private func quit() {
-        NSApp.terminate(nil)
     }
 }

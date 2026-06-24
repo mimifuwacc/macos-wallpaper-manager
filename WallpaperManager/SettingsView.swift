@@ -35,6 +35,9 @@ struct SettingsView: View {
             Toggle("Launch at login", isOn: $controller.launchAtLogin)
 
             HStack {
+                Button("Quit") {
+                    NSApp.terminate(nil)
+                }
                 Spacer()
                 Button("Apply Now") {
                     controller.applyWallpapers()
