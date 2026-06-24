@@ -1,108 +1,199 @@
 import SwiftUI
 
-/// Settings window opened from the menu bar.
+/// Settings window opened when the app is launched.
 /// Lets the user pick/clear the portrait and landscape wallpapers,
-/// toggle auto-apply, and apply immediately.
+/// toggle auto-apply and launch-at-login, apply immediately, or quit.
 struct SettingsView: View {
     @ObservedObject var controller: WallpaperController
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Wallpaper Settings")
-                .font(.title2)
-                .bold()
+        VStack(spacing: 0) {
+            header
 
-            wallpaperSection(
-                title: "Portrait Wallpaper",
-                subtitle: "Applied to portrait displays (height > width)",
-                url: controller.portraitURL,
-                onSelect: { selectPortrait() },
-                onClear: { controller.portraitURL = nil }
-            )
+            ScrollView {
+                VStack(spacing: 16) {
+                    wallpaperCard(
+                        title: "Portrait",
+                        subtitle: "Used on displays taller than they are wide",
+                        systemImage: "rectangle.portrait",
+                        previewSize: CGSize(width: 80, height: 120),
+                        url: controller.portraitURL,
+                        onSelect: selectPortrait,
+                        onClear: { controller.portraitURL = nil }
+                    )
 
-            wallpaperSection(
-                title: "Landscape Wallpaper",
-                subtitle: "Applied to landscape displays",
-                url: controller.landscapeURL,
-                onSelect: { selectLandscape() },
-                onClear: { controller.landscapeURL = nil }
-            )
+                    wallpaperCard(
+                        title: "Landscape",
+                        subtitle: "Used on standard wide displays",
+                        systemImage: "rectangle",
+                        previewSize: CGSize(width: 150, height: 94),
+                        url: controller.landscapeURL,
+                        onSelect: selectLandscape,
+                        onClear: { controller.landscapeURL = nil }
+                    )
 
-            Divider()
-
-            Toggle("Apply automatically on launch", isOn: $controller.autoApplyOnLaunch)
-
-            Toggle("Launch at login", isOn: $controller.launchAtLogin)
-
-            HStack {
-                Button("Quit") {
-                    NSApp.terminate(nil)
+                    optionsCard
                 }
-                Spacer()
-                Button("Apply Now") {
-                    controller.applyWallpapers()
-                }
-                .keyboardShortcut(.defaultAction)
+                .padding(20)
             }
+
+            footer
         }
-        .padding(24)
-        .frame(width: 440)
+        .frame(width: 480, height: 600)
+        .background(backgroundFill)
     }
 
-    // MARK: - Components
+    // MARK: - Header
 
-    @ViewBuilder
-    private func wallpaperSection(
+    private var header: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 26, weight: .medium))
+                .foregroundStyle(.tint)
+                .frame(width: 52, height: 52)
+                .iconSurface()
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Wallpaper Manager")
+                    .font(.title2.weight(.semibold))
+                Text("Orientation-aware desktop wallpapers")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+    }
+
+    // MARK: - Wallpaper card
+
+    private func wallpaperCard(
         title: String,
         subtitle: String,
+        systemImage: String,
+        previewSize: CGSize,
         url: URL?,
         onSelect: @escaping () -> Void,
         onClear: @escaping () -> Void
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.headline)
-            Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Label(title, systemImage: systemImage)
+                    .font(.headline)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
-            HStack(spacing: 12) {
-                preview(for: url)
+            HStack(alignment: .center, spacing: 16) {
+                preview(for: url, size: previewSize)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(url?.lastPathComponent ?? "Not selected")
-                        .lineLimit(1)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(url?.lastPathComponent ?? "No image selected")
+                        .font(.subheadline)
+                        .lineLimit(2)
                         .truncationMode(.middle)
                         .foregroundStyle(url == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
 
-                    HStack {
+                    HStack(spacing: 8) {
                         Button("Choose…", action: onSelect)
                         if url != nil {
-                            Button("Clear", action: onClear)
+                            Button("Clear", role: .destructive, action: onClear)
                         }
                     }
+                    .controlSize(.small)
                 }
+
                 Spacer(minLength: 0)
             }
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
 
-    private func preview(for url: URL?) -> some View {
+    private func preview(for url: URL?, size: CGSize) -> some View {
         Group {
             if let url, let image = NSImage(contentsOf: url) {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.secondary.opacity(0.15))
-                    .overlay(
-                        Image(systemName: "photo")
-                            .foregroundStyle(.secondary)
-                    )
+                ZStack {
+                    Rectangle().fill(.quaternary)
+                    Image(systemName: "photo")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
-        .frame(width: 96, height: 60)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .frame(width: size.width, height: size.height)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+    }
+
+    // MARK: - Options card
+
+    private var optionsCard: some View {
+        VStack(spacing: 0) {
+            Toggle(isOn: $controller.autoApplyOnLaunch) {
+                optionLabel("Apply automatically on launch",
+                            subtitle: "Set wallpapers as soon as the app starts")
+            }
+            .padding(.vertical, 12)
+
+            Divider()
+
+            Toggle(isOn: $controller.launchAtLogin) {
+                optionLabel("Launch at login",
+                            subtitle: "Run quietly in the background after you sign in")
+            }
+            .padding(.vertical, 12)
+        }
+        .toggleStyle(.switch)
+        .padding(.horizontal, 18)
+        .cardSurface()
+    }
+
+    private func optionLabel(_ title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Footer
+
+    private var footer: some View {
+        HStack {
+            Button("Quit", role: .destructive) {
+                NSApp.terminate(nil)
+            }
+
+            Spacer()
+
+            Button("Apply Now") {
+                controller.applyWallpapers()
+            }
+            .prominentGlassButton()
+            .keyboardShortcut(.defaultAction)
+        }
+        .controlSize(.large)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(.bar)
+    }
+
+    private var backgroundFill: some ShapeStyle {
+        .background
     }
 
     // MARK: - Actions
@@ -119,5 +210,24 @@ struct SettingsView: View {
             controller.landscapeURL = url
             controller.applyWallpapers()
         }
+    }
+}
+
+// MARK: - Liquid Glass helpers
+
+private extension View {
+    /// Glass surface for content cards.
+    func cardSurface(cornerRadius: CGFloat = 16) -> some View {
+        glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+
+    /// Circular glass surface for the header icon.
+    func iconSurface() -> some View {
+        glassEffect(.regular, in: Circle())
+    }
+
+    /// Prominent glass action button.
+    func prominentGlassButton() -> some View {
+        buttonStyle(.glassProminent)
     }
 }
