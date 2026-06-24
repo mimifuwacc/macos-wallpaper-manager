@@ -10,14 +10,14 @@ A macOS background app that automatically switches your desktop wallpaper based 
 - **Apply automatically on launch** toggle.
 - **Launch at login** toggle (registers via `SMAppService`).
 - Automatically re-applies on display connect / disconnect / rotation / resolution change.
-- A small **Settings** window with previews. Launch the app (or re-launch it from Finder/Spotlight) to open Settings; quit from the **Quit** button there.
+- A **Settings** window with a **Liquid Glass** UI and orientation-aware previews. Launch the app (or re-launch it from Finder/Spotlight) to open Settings; quit from the **Quit** button there.
 
 A display is treated as **portrait** when `screen.frame.height > screen.frame.width`, otherwise **landscape**.
 
 ## Requirements
 
-- macOS 13.0+
-- Xcode 15+ (built with Xcode 26)
+- macOS 26.0+ (uses the Liquid Glass APIs, e.g. `glassEffect`)
+- Xcode 26+
 
 ## Build & Run
 
