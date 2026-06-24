@@ -2,34 +2,44 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    private var statusItem: NSStatusItem!
     private let controller = WallpaperController()
     private lazy var settingsWindowController = SettingsWindowController(controller: controller)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Stay out of the Dock and live in the menu bar.
+        // Headless background agent: no Dock icon, no menu bar item.
         NSApp.setActivationPolicy(.accessory)
 
-        setupStatusItem()
         observeScreenChanges()
 
         // If auto-apply is enabled, apply for the current screen layout on launch.
         if controller.autoApplyOnLaunch {
             controller.applyWallpapers()
         }
+
+        // Stay silent when launched at login; only show settings when the
+        // user opens the app themselves (first run or a manual re-launch).
+        if !launchedAsLoginItem {
+            settingsWindowController.show()
+        }
     }
 
-    // MARK: - Menu bar
+    /// Re-launching the app while it is already running (e.g. double-clicking it
+    /// in Finder) reopens the settings window instead of starting a new process.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        settingsWindowController.show()
+        return true
+    }
 
-    private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.image = NSImage(
-            systemSymbolName: "photo.on.rectangle",
-            accessibilityDescription: "Wallpaper Manager"
-        )
-        // Clicking the menu bar icon opens the settings window directly (no dropdown menu).
-        statusItem.button?.target = self
-        statusItem.button?.action = #selector(openSettings)
+    // MARK: - Launch detection
+
+    /// Whether this launch was triggered by the login-item registration rather
+    /// than by the user. Uses the AppleEvent that launched the app.
+    private var launchedAsLoginItem: Bool {
+        guard let event = NSAppleEventManager.shared().currentAppleEvent,
+              event.eventID == kAEOpenApplication else {
+            return false
+        }
+        return event.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
     }
 
     // MARK: - Screen layout observation
@@ -47,11 +57,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func screenParametersChanged(_ notification: Notification) {
         print("Screen layout changed; re-applying wallpapers")
         controller.applyWallpapers()
-    }
-
-    // MARK: - Actions
-
-    @objc private func openSettings() {
-        settingsWindowController.show()
     }
 }
