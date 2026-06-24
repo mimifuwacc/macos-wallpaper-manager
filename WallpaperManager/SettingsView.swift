@@ -180,10 +180,8 @@ struct SettingsView: View {
 
             Spacer()
 
-            Button {
+            Button("Apply Now") {
                 controller.applyWallpapers()
-            } label: {
-                Label("Apply Now", systemImage: "sparkles")
             }
             .prominentGlassButton()
             .keyboardShortcut(.defaultAction)
