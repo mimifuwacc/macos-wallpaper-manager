@@ -5,6 +5,7 @@ import SwiftUI
 /// toggle auto-apply and launch-at-login, apply immediately, or quit.
 struct SettingsView: View {
     @ObservedObject var controller: WallpaperController
+    @ObservedObject var updater: Updater
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,6 +34,8 @@ struct SettingsView: View {
                     )
 
                     optionsCard
+
+                    updatesCard
                 }
                 .padding(20)
             }
@@ -168,6 +171,46 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Updates card
+
+    private var updatesCard: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Updates")
+                Text(updateStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if updaterIsBusy {
+                ProgressView().controlSize(.small)
+            }
+
+            Button("Check for Updates") {
+                updater.check(silent: false)
+            }
+            .controlSize(.small)
+            .disabled(updaterIsBusy)
+        }
+        .padding(18)
+        .cardSurface()
+    }
+
+    private var updateStatusText: String {
+        switch updater.status {
+        case .idle, .failed: return "Version \(updater.currentVersion)"
+        case .checking: return "Checking…"
+        case .upToDate: return "Up to date (\(updater.currentVersion))"
+        case .available(let v): return "Version \(v) is available"
+        case .downloading: return "Downloading…"
+        }
+    }
+
+    private var updaterIsBusy: Bool {
+        updater.status == .checking || updater.status == .downloading
     }
 
     // MARK: - Footer
