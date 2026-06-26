@@ -1,9 +1,11 @@
 import AppKit
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let controller = WallpaperController()
-    private lazy var settingsWindowController = SettingsWindowController(controller: controller)
+    private let updater = Updater()
+    private lazy var settingsWindowController = SettingsWindowController(controller: controller, updater: updater)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Headless background agent: no Dock icon, no menu bar item.
@@ -15,6 +17,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if controller.autoApplyOnLaunch {
             controller.applyWallpapers()
         }
+
+        // Check for updates on launch (silent: only prompts if one is available).
+        updater.check(silent: true)
 
         // Stay silent when launched at login; only show settings when the
         // user opens the app themselves (first run or a manual re-launch).

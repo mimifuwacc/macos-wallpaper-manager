@@ -5,8 +5,8 @@ import SwiftUI
 /// Reused across opens; not released on close so state is preserved.
 final class SettingsWindowController: NSWindowController {
 
-    convenience init(controller: WallpaperController) {
-        let hosting = NSHostingController(rootView: SettingsView(controller: controller))
+    convenience init(controller: WallpaperController, updater: Updater) {
+        let hosting = NSHostingController(rootView: SettingsView(controller: controller, updater: updater))
         let window = NSWindow(contentViewController: hosting)
         window.title = "Wallpaper Manager Settings"
         window.styleMask = [.titled, .closable, .miniaturizable]
