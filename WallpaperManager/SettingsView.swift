@@ -260,17 +260,35 @@ struct SettingsView: View {
 
 private extension View {
     /// Glass surface for content cards.
+    /// Uses Liquid Glass on macOS 26 (Tahoe); earlier releases lack the glass
+    /// APIs, so they fall back to a translucent material in the same shape.
+    @ViewBuilder
     func cardSurface(cornerRadius: CGFloat = 16) -> some View {
-        glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: shape)
+        } else {
+            background(.regularMaterial, in: shape)
+        }
     }
 
     /// Circular glass surface for the header icon.
+    @ViewBuilder
     func iconSurface() -> some View {
-        glassEffect(.regular, in: Circle())
+        if #available(macOS 26, *) {
+            glassEffect(.regular, in: Circle())
+        } else {
+            background(.regularMaterial, in: Circle())
+        }
     }
 
-    /// Prominent glass action button.
+    /// Prominent action button: Liquid Glass on Tahoe, bordered elsewhere.
+    @ViewBuilder
     func prominentGlassButton() -> some View {
-        buttonStyle(.glassProminent)
+        if #available(macOS 26, *) {
+            buttonStyle(.glassProminent)
+        } else {
+            buttonStyle(.borderedProminent)
+        }
     }
 }
