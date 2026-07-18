@@ -14,7 +14,13 @@ final class WallpaperController: ObservableObject {
         static let portrait = "portraitWallpaperURL"
         static let landscape = "landscapeWallpaperURL"
         static let autoApply = "autoApplyOnLaunch"
+        static let useSolidColor = "useSolidColor"
+        static let solidColor = "solidColorURL"
     }
+
+    /// Directory where macOS ships its built-in solid-color wallpapers.
+    private static let solidColorsDirectory = URL(
+        fileURLWithPath: "/System/Library/Desktop Pictures/Solid Colors", isDirectory: true)
 
     // MARK: - Stored values (synced to UserDefaults on change)
 
@@ -33,6 +39,19 @@ final class WallpaperController: ObservableObject {
         didSet { defaults.set(autoApplyOnLaunch, forKey: Keys.autoApply) }
     }
 
+    /// Whether to use a single solid color on every display instead of images.
+    @Published var useSolidColor: Bool {
+        didSet { defaults.set(useSolidColor, forKey: Keys.useSolidColor) }
+    }
+
+    /// The chosen solid-color wallpaper, drawn from the colors macOS ships.
+    @Published var solidColorURL: URL? {
+        didSet { defaults.set(solidColorURL, forKey: Keys.solidColor) }
+    }
+
+    /// Solid-color wallpapers bundled with macOS, sorted by display name.
+    let solidColors: [SolidColorOption] = WallpaperController.loadSolidColors()
+
     /// Whether the app is registered to launch automatically at login.
     /// Backed by the system login-item registration rather than UserDefaults.
     @Published var launchAtLogin: Bool {
@@ -44,8 +63,39 @@ final class WallpaperController: ObservableObject {
         portraitURL = defaults.url(forKey: Keys.portrait)
         landscapeURL = defaults.url(forKey: Keys.landscape)
         autoApplyOnLaunch = defaults.bool(forKey: Keys.autoApply)
+        useSolidColor = defaults.bool(forKey: Keys.useSolidColor)
+        solidColorURL = defaults.url(forKey: Keys.solidColor)
         // The system registration is the source of truth for the login item.
         launchAtLogin = SMAppService.mainApp.status == .enabled
+
+        // Fall back to a sensible built-in color the first time solid mode is used.
+        if solidColorURL == nil {
+            solidColorURL = Self.preferredDefaultColor(from: solidColors)?.url
+        }
+    }
+
+    // MARK: - Solid colors
+
+    /// Enumerate the solid-color wallpapers macOS ships in its Desktop Pictures folder.
+    private static func loadSolidColors() -> [SolidColorOption] {
+        let contents = (try? FileManager.default.contentsOfDirectory(
+            at: solidColorsDirectory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles])) ?? []
+
+        return contents
+            .filter { $0.pathExtension.lowercased() == "png" }
+            .map { SolidColorOption(name: $0.deletingPathExtension().lastPathComponent, url: $0) }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// Pick a neutral default color, preferring familiar macOS grays when present.
+    private static func preferredDefaultColor(from colors: [SolidColorOption]) -> SolidColorOption? {
+        let preferred = ["Space Gray", "Space Gray Pro", "Stone", "Silver", "Black"]
+        for name in preferred {
+            if let match = colors.first(where: { $0.name == name }) { return match }
+        }
+        return colors.first
     }
 
     // MARK: - Launch at login
@@ -90,6 +140,11 @@ final class WallpaperController: ObservableObject {
 
     /// Set the wallpaper for every connected display based on its orientation.
     func applyWallpapers() {
+        if useSolidColor {
+            applySolidColor()
+            return
+        }
+
         let workspace = NSWorkspace.shared
 
         for screen in NSScreen.screens {
@@ -107,4 +162,28 @@ final class WallpaperController: ObservableObject {
             }
         }
     }
+
+    /// Apply the chosen solid color to every connected display, regardless of orientation.
+    private func applySolidColor() {
+        guard let url = solidColorURL else {
+            print("Solid color mode is on but no color is selected")
+            return
+        }
+
+        let workspace = NSWorkspace.shared
+        for screen in NSScreen.screens {
+            do {
+                try workspace.setDesktopImageURL(url, for: screen, options: [:])
+            } catch {
+                print("Failed to set solid color screen=\(screen.localizedName): \(error)")
+            }
+        }
+    }
+}
+
+/// A solid-color wallpaper shipped with macOS, identified by its image URL.
+struct SolidColorOption: Identifiable, Hashable {
+    let name: String
+    let url: URL
+    var id: URL { url }
 }

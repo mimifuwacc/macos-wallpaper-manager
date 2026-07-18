@@ -13,25 +13,29 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(spacing: 16) {
-                    wallpaperCard(
-                        title: "Portrait",
-                        subtitle: "Used on displays taller than they are wide",
-                        systemImage: "rectangle.portrait",
-                        previewSize: CGSize(width: 80, height: 120),
-                        url: controller.portraitURL,
-                        onSelect: selectPortrait,
-                        onClear: { controller.portraitURL = nil }
-                    )
+                    solidColorCard
 
-                    wallpaperCard(
-                        title: "Landscape",
-                        subtitle: "Used on standard wide displays",
-                        systemImage: "rectangle",
-                        previewSize: CGSize(width: 150, height: 94),
-                        url: controller.landscapeURL,
-                        onSelect: selectLandscape,
-                        onClear: { controller.landscapeURL = nil }
-                    )
+                    if !controller.useSolidColor {
+                        wallpaperCard(
+                            title: "Portrait",
+                            subtitle: "Used on displays taller than they are wide",
+                            systemImage: "rectangle.portrait",
+                            previewSize: CGSize(width: 80, height: 120),
+                            url: controller.portraitURL,
+                            onSelect: selectPortrait,
+                            onClear: { controller.portraitURL = nil }
+                        )
+
+                        wallpaperCard(
+                            title: "Landscape",
+                            subtitle: "Used on standard wide displays",
+                            systemImage: "rectangle",
+                            previewSize: CGSize(width: 150, height: 94),
+                            url: controller.landscapeURL,
+                            onSelect: selectLandscape,
+                            onClear: { controller.landscapeURL = nil }
+                        )
+                    }
 
                     optionsCard
 
@@ -138,6 +142,78 @@ struct SettingsView: View {
                 .strokeBorder(.white.opacity(0.12), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+    }
+
+    // MARK: - Solid color card
+
+    private var solidColorCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Toggle(isOn: solidColorBinding) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Label("Solid color", systemImage: "paintpalette")
+                        .font(.headline)
+                    Text("Fill every display with a single color instead of images")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+
+            if controller.useSolidColor {
+                Divider()
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 44), spacing: 10)],
+                    spacing: 10
+                ) {
+                    ForEach(controller.solidColors) { color in
+                        swatch(for: color)
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
+    }
+
+    /// Toggling solid color on/off should re-apply immediately so the change is visible.
+    private var solidColorBinding: Binding<Bool> {
+        Binding(
+            get: { controller.useSolidColor },
+            set: {
+                controller.useSolidColor = $0
+                controller.applyWallpapers()
+            }
+        )
+    }
+
+    private func swatch(for color: SolidColorOption) -> some View {
+        let isSelected = controller.solidColorURL == color.url
+        return Button {
+            controller.solidColorURL = color.url
+            controller.applyWallpapers()
+        } label: {
+            Group {
+                if let image = NSImage(contentsOf: color.url) {
+                    Image(nsImage: image).resizable()
+                } else {
+                    Rectangle().fill(.quaternary)
+                }
+            }
+            .aspectRatio(1, contentMode: .fill)
+            .frame(height: 44)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(
+                        isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.white.opacity(0.15)),
+                        lineWidth: isSelected ? 3 : 1
+                    )
+            )
+            .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+        }
+        .buttonStyle(.plain)
+        .help(color.name)
     }
 
     // MARK: - Options card
